@@ -26,6 +26,30 @@ describe LogStash::Filters::Grok do
     end
   end
 
+  describe "complex syslog line" do
+    # The logstash config goes here.
+    # At this time, only filters are supported.
+    config <<-CONFIG
+      filter {
+        grok {
+          pattern => "%{POSTFIXSMTPLOG}"
+          singles => true
+        }
+      }
+    CONFIG
+
+    sample "Oct  2 06:55:04 mail20 postfix/smtp[17714]: B89F93CC26: to=<dyyy.vxxx@gmail.com>, relay=gmail-smtp-in.l.google.com[74.125.45.27]:25, delay=0.84, delays=0.3/0.01/0.15/0.38, dsn=2.0.0, status=sent (250 2.0.0 OK 1349175304 r68si528134yhc.107)" do
+      reject { subject["@tags"] }.include?("_grokparsefailure")
+      insist { subject["logsource"] } == "mail20"
+      insist { subject["timestamp"] } == "Oct  2 06:55:04"
+      insist { subject["program"] } == "postfix/smtp"
+      insist { subject["pid"] } == "17714"
+      insist { subject["queue_id"] } == "B89F93CC26"
+      insist { subject["to"] } == "<dyyy.vxxx@gmail.com>"
+      insist { subject["ip"] } == "74.125.45.27"
+    end
+  end
+
   describe "parsing an event with multiple messages (array of strings)" do
     config <<-CONFIG
       filter {

@@ -1,0 +1,26 @@
+# maillog stuff:
+QUEUEID (?:[A-F0-9]+|NOQUEUE)
+ADDRESSPART [a-zA-Z0-9_.+-]+
+ADDRESS <%{ADDRESSPART:local}@%{ADDRESSPART:remote}>
+RELAY (?:%{HOSTNAME}(?:\[%{IP:ip}\]:%{POSREAL:port})|none|%{WORD})
+POSREAL [0-9]+(.[0-9]+)?
+DELAYS %{POSREAL:a:float}/%{POSREAL:b:float}/%{POSREAL:c:float}/%{POSREAL:d:float}
+DSN %{POSINT}.%{INT}.%{INT}
+STATUS sent|deferred|bounced|expired
+PERMERROR 5[0-9]{2}
+RESPONSE %{DATA}
+COMMAND %{DATA}
+# Partials
+SMTP_ERROR_CODE %{INT}{3}
+POSTFIX_HOSTNAME (?:%{HOSTNAME:hostname}(?:\[%{IP:ip:ip}\]))
+# in the following google smtp's uses dash as separator
+SMTP_SAID_MESSAGE %{SMTP_ERROR_CODE:smtp_error_code:int}((-| )%{DSN:dsn})? %{DATA:reason}
+# Postfix message types
+POSTFIX_CONNECT_ERROR connect to %{RELAY:relay}: %{DATA:reason}$
+POSTFIX_LOST_CONNECTION %{QUEUEID:queue_id}: lost connection with %{POSTFIX_HOSTNAME} while %{DATA:while}$
+POSTFIX_HOST_REFUSED %{QUEUEID:queue_id}: host %{POSTFIX_HOSTNAME} refused to talk to me: %{DATA:reason}$
+POSTFIX_HOST_SAID %{QUEUEID:queue_id}: host %{POSTFIX_HOSTNAME} said: %{SMTP_SAID_MESSAGE:host_message}$
+POSTFIX_SMTP_WARNING warning: %{DATA:warning}$
+POSTFIX_SMTP_LOG %{QUEUEID:queue_id}: to=%{ADDRESS:to},( orig_to=%{ADDRESS:original_to},)? relay=%{RELAY:relay},( conn_use=%{POSINT+},)? delay=%{POSREAL:delay}, delays=%{DELAYS}, dsn=%{DSN:dsn}, status=%{STATUS:status} \(%{DATA:reason}\)$
+# Postfix smtp generic matcher
+POSTFIXSMTPLOG %{SYSLOGBASE2} %{POSTFIX_SMTP_LOG}|%{POSTFIX_CONNECT_ERROR}|%{POSTFIX_LOST_CONNECTION}|%{POSTFIX_HOST_REFUSED}|%{POSTFIX_HOST_SAID}|%{POSTFIX_SMTP_WARNING}
